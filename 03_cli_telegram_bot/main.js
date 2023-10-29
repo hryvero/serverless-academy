@@ -1,5 +1,4 @@
 const TelegramBot = require('node-telegram-bot-api');
-const fs = require('fs')
 
 
 const { Command } = require('commander');
@@ -23,7 +22,7 @@ program.command('send-message')
     .argument('<string>', 'Some message')
     .action((str, options) => {
         bot.sendMessage(chatId, str);
-        console.log("sucess");
+        console.log("Message  sent successfuly!");
     });
 
 program.command('send-photo')
@@ -32,22 +31,11 @@ program.command('send-photo')
     .action((path, options) => {
         bot.sendPhoto(chatId, path, { caption: 'Check out this photo!' })
             .then(() => {
-                console.log('Photo sent successfully');
+                console.log('Photo sent successfully!');
             })
             .catch((error) => {
                 console.error('Error sending photo:', error.message);
             });
-        // bot.sendPhoto(chatId, fs.createReadStream(path))
-        //     .then(() => {
-        //         console.log('Photo sent successfully');
-        //     })
-        //     .catch((error) => {
-        //         console.error('Error sending photo:', error);
-        //     });
     });
 
 program.parse();
-
-// console.log(chatId)
-
-// program.parse();

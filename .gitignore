@@ -1,1 +1,6 @@
 .idea
+.gitignore
+node_modules
+02_cli_primitive_db/node_modules
+03_cli_telegram_bot/node_modules
+04_weather_forecast/node_modules

@@ -1,4 +1,6 @@
 const TelegramBot = require('node-telegram-bot-api');
+const NodeCache = require( "node-cache" );
+const myCache = new NodeCache( { stdTTL: 100, checkperiod: 120 } );
 const axios = require('axios');
 
 
@@ -6,6 +8,9 @@ const token = "6702197813:AAFkkya7bBS1Q1uYSPGNZMCzH13DbF53uAY"
 const monoToken = 'u3fwjFQmzaKZ-LGhjzXfZVzSnwxfQoMWg4OoJhbFwShU'
 const bot = new TelegramBot(token, {polling: true, none_stop: true});
 let chatId = 608570756;
+const cacheKey = 'monobankCurrencyData';
+
+
 let intervalId;
 
 
@@ -127,41 +132,79 @@ bot.on("message",(msg)=>{
 })
 
 const loadCurrency = async (currency) => {
-    const result = await axios.get(`https://api.privatbank.ua/p24api/pubinfo?exchange&coursid=5`)
+    const resultPrivat = await axios.get(`https://api.privatbank.ua/p24api/pubinfo?exchange&coursid=5`)
         .then((res) => {
             return res.data
         }).catch((error) => {
             return error.message
         })
+    const cachedData = myCache.get(cacheKey);
+    if (cachedData) {
+        bot.sendMessage(chatId,"Зачекайте хвилинку!")
+        return cachedData;
+    }
+    const resultMono= await axios.get("https://api.monobank.ua/bank/currency")
+        .then((res)=>{
+            return res.data
+        }).catch((error)=>{
+            return error.message
+        })
+    myCache.set(cacheKey, resultMono);
 
-    let text={}
+    let textMono={}
+    let textPrivat={}
     if(currency==="EUR"){
-        text={
+        textPrivat={
             time: new Date().toLocaleString()+" GMT +02:00",
-            BASE_CURRENCY: result[0].base_ccy,
-            EUR_BUY: result[0].buy,
-            EUR_SALE: result[0].sale,
+            provider:"Privat24",
+            BASE_CURRENCY: resultPrivat[0].base_ccy,
+            EUR_BUY: resultPrivat[0].buy,
+            EUR_SALE: resultPrivat[0].sale,
         }
     }else {
-        text={
+        textPrivat={
             time: new Date().toLocaleString()+" GMT +02:00",
-            BASE_CURRENCY: result[1].base_ccy,
-            USD_BUY: result[1].buy,
-            USD_SALE: result[1].sale,
+            provider:"Privat24",
+            BASE_CURRENCY: resultPrivat[1].base_ccy,
+            USD_BUY: resultPrivat[1].buy,
+            USD_SALE: resultPrivat[1].sale,
+        }
+    }
+    if(currency==="EUR"){
+        textMono={
+            time: new Date().toLocaleString()+" GMT +02:00",
+            provider:"Monobank",
+            BASE_CURRENCY: "UAH",
+            EUR_BUY: resultMono[1].rateBuy,
+            EUR_SALE: resultMono[1].rateSell,
+        }
+    }else {
+        textMono={
+            time: new Date().toLocaleString()+" GMT +02:00",
+            provider:"Monobank",
+            BASE_CURRENCY: "UAH",
+            USD_BUY: resultPrivat[0].rateBuy,
+            USD_SALE: resultPrivat[0].rateSell,
         }
     }
 
-
+    const resultStringPrivat=formatObject(textPrivat)
+    const resultStringMono=formatObject(textMono)
+    bot.sendMessage(chatId, resultStringPrivat)
+    bot.sendMessage(chatId, resultStringMono)
+}
+const formatObject=(object)=>{
     let resultString = "";
-    for (const key in text) {
-        if (text.hasOwnProperty(key)) {
-            resultString += key + ": " + text[key] + ", \n ";
+    for (const key in object) {
+        if (object.hasOwnProperty(key)) {
+            resultString += key + ": " + object[key] + ", \n ";
         }
     }
     resultString = resultString.slice(0, -2);
-    bot.sendMessage(chatId, resultString)
-}
+    return resultString;
 
+
+}
 bot.onText(/\/stop/, (msg) => {
     clearInterval(intervalId)
     bot.sendMessage(chatId, "I hope you liked it!",{

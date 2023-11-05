@@ -6,9 +6,6 @@ const bot = new TelegramBot(token, {polling: true, none_stop: true});
 let chatId = 608570756;
 let intervalId;
 
-const myInterval = (someFunction, time) => {
-    intervalId = setInterval(() => someFunction, time)
-}
 
 bot.onText(/\/start/, () => {
     clearInterval(intervalId)
